@@ -2,6 +2,7 @@
     Author:      Andrius Kelly
     Date:        March 13, 2018
     Description: CS 344 Project 4
+	Note:		Network code modified from server.c file provided.
 */
 
 #include <stdio.h>
@@ -30,7 +31,7 @@ int main(int argc, char* argv[]) {
 	// Check usage & arg
 	if (argc < 2) { fprintf(stderr,"USAGE: %s port\n", argv[0]); exit(1); } 
 
-	structportNumber = atoi(argv[1]); 
+	portNumber = atoi(argv[1]); 
 	
 	//zero out serv addr struct
 	memset((char *)&serverAddress, '\0', sizeof(serverAddress));
@@ -45,7 +46,7 @@ int main(int argc, char* argv[]) {
 	if (listenSocketFD < 0 ) { error("ERROR opening socket"); }
 
 	//bind socket to port
-	if ( bind (listenSocketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddres)) < 0 ) {
+	if ( bind (listenSocketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0 ) {
 		error("ERROR on binding");
 	}
 
@@ -55,16 +56,20 @@ int main(int argc, char* argv[]) {
 
 	while(1) {
 
-		establishedConnectionFD = accept(listenSockFD, (struct sockaddr*)&clientAddress, &sizeOfClientInfo);
+		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr*)&clientAddress, &sizeOfClientInfo);
 		if (establishedConnectionFD < 0 ) { error("ERROR on accept");}	
 
-		//receive message
-		memset(buffer, '\0', BUF_LEN);
-		charsRead = recv( establishedConnectionFD, buffer, 255, 0);
-	 	if (charsRead < 0) { error("ERROR reading from socket");}
+		charsRead = -1; 
+		//set charsRead on loop until client closes connection (charsRead == 0 )
+		while( charsRead != 0 ) {
+			//receive message
+			memset(buffer, '\0', BUF_LEN);
+			charsRead = recv( establishedConnectionFD, buffer, 255, 0);
+			if (charsRead < 0) { error("ERROR reading from socket");}
 
-		printf(buffer);
-		fflush(stdout);
+			printf(buffer);
+			fflush(stdout);
+		}
 
 		close(establishedConnectionFD);
 		

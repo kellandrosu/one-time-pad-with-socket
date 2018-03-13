@@ -19,8 +19,8 @@ int main(int argc, char* argv[]) {
 	char* key;
 
 	if ( argc != 2) {
-		fprintf(stderr, "Error - Usage: keygen [int]\n");
-		exit(1);
+		fprintf(stderr, "USAGE: %s [keylength]\n", argv[0]);
+		exit(0);
 	}
 
 	keylength = atoi(argv[1]);
