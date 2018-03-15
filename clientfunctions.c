@@ -32,7 +32,7 @@ void getTranslationFromServer(char* plainTextFile, char* keyFile, int portNumber
 	int socketFD, charsWritten, charsRead, textLength;
     struct sockaddr_in serverAddress;
     struct hostent* serverHostInfo;
-    char* serverHost = "os1";
+    char* serverHost = "localhost";
     char* plaintext;
     char* key;
     char* payload;
