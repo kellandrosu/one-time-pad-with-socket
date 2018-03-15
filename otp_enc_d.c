@@ -16,30 +16,73 @@
 #include <signal.h>
 #include <errno.h>
 
-
-#define true 1
-#define false 0
-#define CHILD_TOTAL 5
-#define BUF_LEN 256
+#include "serverfunctions.h"
 
 
 //GLOBALS
 pid_t child_pids[CHILD_TOTAL];
 
 
-// PROTOTYPES
-char* encryptMessage(char* messageIn) ;
-void communicateWithClient(int establishedConnectionFD) ;
-void catchSIGCHLD(int signo, siginfo_t* info, void* vp) ;
-void addChildProcess( pid_t pid);
-int removeChildProcess( pid_t pid);
-int isChildProcess( pid_t pid);
 
-// Error function used for reporting issues
-void error(const char *msg) { fprintf(stderr,msg); exit(1); } 
+/* -------  PROCESS MANAGEMENT FUNCTIONS ------ */
+
+/*
+    kills dead child processes
+*/
+void catchSIGCHLD(int signo, siginfo_t* info, void* vp) {
+    pid_t child_pid;
+    int childExitMethod = -5;
+    int result;
+
+    //check if calling pid is a child process
+    if ( isChildProcess(info->si_pid) ) {
+        //get status of calling process
+        child_pid = info->si_pid;
+        do {
+            errno = 0;
+            result = waitpid(child_pid, &childExitMethod, WNOHANG);
+        } while (errno == EINTR && result == -1);
+
+        if (result == child_pid) {
+            //if child exited then need call sigterm to kill zombie
+            if( WIFEXITED(childExitMethod) != 0 ) {
+                removeChildProcess(child_pid);
+                kill(child_pid, SIGTERM);
+            }
+        }
+    }
+}
+
+/*
+*   process id array functions
+*/
+void addChildProcess( pid_t pid) {
+    int i;
+    for (i=0; i < CHILD_TOTAL; i++) {
+        if ( child_pids[i] == 0) {
+            child_pids[i] = pid;
+            break;
+}}}
+int removeChildProcess( pid_t pid) {
+    int i;
+    for (i=0; i < CHILD_TOTAL; i++) {
+        if ( child_pids[i] == pid) {
+            child_pids[i] = 0;
+            return true;
+    }} return false;
+}
+int isChildProcess( pid_t pid) {
+    int i;
+    for (i=0; i < CHILD_TOTAL; i++) {
+        if ( child_pids[i] == pid) {
+            return true;
+    }} return false; 
+}
+
 
 
 /*-------------    MAIN    --------------*/
+
 
 
 int main(int argc, char* argv[]) {
@@ -72,13 +115,16 @@ int main(int argc, char* argv[]) {
 
 	//set up listensocket
 	listenSocketFD = socket(AF_INET, SOCK_STREAM, 0);
-	if (listenSocketFD < 0 ) { error("ERROR opening socket"); }
+	if (listenSocketFD < 0 ) { fprintf(stderr, "ERROR opening socket\n"); exit(1); }
 
 	//bind socket to port
 	if ( bind (listenSocketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0 ) {
-		error("ERROR on binding");
+		fprintf(stderr, "ERROR on binding\n");
+		exit(1);	
 	}
-	listen( listenSocketFD, 5); //open socket to listen with queue length of 5
+	
+	//open socket to listen with queue length of 5
+	listen( listenSocketFD, 5); 
 
 	sizeOfClientInfo = sizeof(clientAddress);
 
@@ -94,10 +140,11 @@ int main(int argc, char* argv[]) {
 			spawnId = fork();
 			switch(spawnId) {
 				case -1:
-					error("ERROR: process fork error");
+					fprintf(stderr, "ERROR: process fork error\n");
+					exit(1);
 					break;
 				case 0:
-					communicateWithClient(establishedConnectionFD) ;
+					communicateEncoding(establishedConnectionFD) ;
 					return 0;
 				default:
 					addChildProcess(spawnId);
@@ -107,206 +154,4 @@ int main(int argc, char* argv[]) {
 	}
 	return 0;
 }
-
-
-
-/*-------------------      FUNCTIONS     --------------------*/
-
-/*
-	kills dead child processes
-*/
-void catchSIGCHLD(int signo, siginfo_t* info, void* vp) {
-	pid_t child_pid;
-	int childExitMethod = -5;
-	int result;
-
-	//check if calling pid is a child process
-	if ( isChildProcess(info->si_pid) ) {
-		//get status of calling process
-		child_pid = info->si_pid;
-		do { 
-			errno = 0;
-			result = waitpid(child_pid, &childExitMethod, WNOHANG);
-		} while (errno == EINTR && result == -1);
-
-		if (result == child_pid) {
-			//if child exited then need call sigterm to kill zombie
-			if( WIFEXITED(childExitMethod) != 0 ) {
-				removeChildProcess(child_pid);
-				kill(child_pid, SIGTERM);
-			}
-		}
-	}
-}
-
-//BG process array functions
-void addChildProcess( pid_t pid) {
-    int i;
-    for (i=0; i < CHILD_TOTAL; i++) {
-        if ( child_pids[i] == 0) {
-            child_pids[i] = pid;
-            break;
-}   }   }
-int removeChildProcess( pid_t pid) {
-    int i;
-    for (i=0; i < CHILD_TOTAL; i++) {
-        if ( child_pids[i] == pid) {
-            child_pids[i] = 0;
-            return true;
-    }   }
-    return false;
-}
-int isChildProcess( pid_t pid) {
-    int i;
-    for (i=0; i < CHILD_TOTAL; i++) {
-        if ( child_pids[i] == pid) {
-            return true;
-    }   }
-    return false;
-}
-
-
-/*
-	receives message with key separated by @, 
-	sends back encrypted message and closes connection
-*/
-void communicateWithClient(int establishedConnectionFD) {
-	
-	int charsRead, packetLength, messageSize, charsSent;
-	char buffer[BUF_LEN + 1];
-	char* messageIn;
-	char* messageOut;
-	
-	//initialize incomming message to empty string
-	messageSize = 2*sizeof(buffer) + 1;
-	messageIn = malloc(messageSize);
-	memset(messageIn, '\0', messageSize);
-	
-	charsRead = -1; 
-			
-	//receive message
-	while( strstr(messageIn, "##") == NULL ){
-
-
-		memset(buffer, '\0', sizeof(buffer) );
-		charsRead = recv( establishedConnectionFD, buffer, BUF_LEN, 0);
-		
-		if (charsRead < 0) { 
-			fprintf(stderr, "ERROR could not read\n");
-		}
-		else if (charsRead < BUF_LEN ) {
-			fprintf(stderr, "ERROR read length smaller than buffer\n");
-			break;
-		}
-
-		//make sure input is read
-		do {
-			ioctl( establishedConnectionFD, FIONREAD, &packetLength );
-		} while (packetLength > 0);
-
-		//cat buffer to messageIn
-		if( messageSize <= BUF_LEN + strlen(messageIn) ) {
-			messageSize *= 2;
-			messageIn = realloc(messageIn, messageSize);
-		}
-		strcat(messageIn, buffer);
-printf("SERVER: message received: %s\n",messageIn);
-	} 
-
-	char* terminalLocation = strstr(messageIn, "##"); // Where is the terminal
-	terminalLocation[0] = '\0'; // End the string early to wipe out the terminal
-
-	messageOut = encryptMessage(messageIn);
-
-printf("SERVER: sending message: %s\n", messageOut);
-	//send encrypted message
-	charsSent = send(establishedConnectionFD, messageOut, strlen(messageOut), 0);
-	if (charsSent < 0 ) { fprintf(stderr,"ERROR writing to socket\n"); }
-
-	//make sure output is sent
-	packetLength = -5;
-	do {
-		ioctl( establishedConnectionFD, TIOCOUTQ, &packetLength );
-	} while (packetLength > 0);
-
-	free(messageIn);
-	free(messageOut);
-
-	close(establishedConnectionFD);
-}
-
-
-
-/*
-		creates and returns a socket for listening
-
-int createListenSocket(struct sockaddr_in* serverAddress, int portNumber) {
-	int listenSocketFD;
-
-	//zero out serv addr struct
-	memset((char *)serverAddress, '\0', sizeof(*serverAddress));
-
-	// Set up the address struct for this process (the server)
-	serverAddress->sin_family = AF_INET;
-	serverAddress->sin_port = htons(portNumber);
-	serverAddress->sin_addr.s_addr = INADDR_ANY;
-
-	//set up listensocket
-	listenSocketFD = socket(AF_INET, SOCK_STREAM, 0);
-	if (listenSocketFD < 0 ) { error("ERROR opening socket"); }
-
-	//bind socket to port
-	if ( bind (listenSocketFD, (struct sockaddr*)serverAddress, sizeof(*serverAddress)) < 0 ) {
-		error("ERROR on binding");
-	}
-}
-*/
-
-
-//	cipher helper function
-int cipher_ctoi( char c) {
-	if( c == ' ') 
-		return 26;
-	else 
-		return c - 'A';
-}
-
-//	encryptMessage helper function
-char cipher(char msg_c, char key_c) {
-	int m, k, cipherInt;
-
-	//get int values for msg_c and key_c
-	m = cipher_ctoi(msg_c);
-	k = cipher_ctoi(key_c);
-
-	cipherInt = (m + k) % 27;
-
-	if( cipherInt == 26 )
-		return ' ';
-	else
-		return cipherInt + 'A';
-}
-
-
-/*
-	splits and incoming message with the @ symbol and encrypts the first half with the second
-	returns pointer to encrypted message
-*/
-char* encryptMessage(char* messageIn) {
-
-	int i;
-	char* messageOut;
-	//set keyToken to point to start of key
-	char* keyToken = strtok(messageIn, "@");
-	keyToken = strtok(NULL, "@");
-	messageOut = (char*)malloc( strlen(messageIn + 1));
-
-	for( i=0; i<strlen(messageIn); i++ ) {
-		messageOut[i] = cipher(messageIn[i], keyToken[i]); 
-	}
-
-	messageOut[strlen(messageIn)] = '\0';
-
-	return messageOut;
-}	
 
