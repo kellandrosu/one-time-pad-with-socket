@@ -26,7 +26,7 @@
 
 /*
 		creates and returns a socket for listening
-
+*/
 int createListenSocket(struct sockaddr_in* serverAddress, int portNumber) {
 	int listenSocketFD;
 
@@ -46,9 +46,9 @@ int createListenSocket(struct sockaddr_in* serverAddress, int portNumber) {
 	if ( bind (listenSocketFD, (struct sockaddr*)serverAddress, sizeof(*serverAddress)) < 0 ) {
 		error("ERROR on binding");
 	}
-	return listenSocket;
+	return listenSocketFD;
 }
-*/
+
 
 
 //	cipher helper function
@@ -117,7 +117,6 @@ void communicateEncoding(int establishedConnectionFD){
 	
 	sendClientMessage(establishedConnectionFD,  messageOut) ;
 
-	close(establishedConnectionFD);
 	free(messageIn);
 	free(messageOut);
 

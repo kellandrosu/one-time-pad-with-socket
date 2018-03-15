@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
 	sigaction(SIGCHLD, &SIGCHLD_action, NULL);
 
 	//network variables
-	int listenSocketFD, establishedConnectionFD, portNumber;
+	int listenSocketFD, connectionFD, portNumber;
 	socklen_t sizeOfClientInfo;
 	struct sockaddr_in serverAddress, clientAddress;
 
@@ -107,22 +107,8 @@ int main(int argc, char* argv[]) {
 	if (argc < 2) { fprintf(stderr,"USAGE: %s [port]\n", argv[0]); exit(1); } 
 	portNumber = atoi(argv[1]); 
 	
-	// Set up the address struct for this process (the server)
-	memset((char *)&serverAddress, '\0', sizeof(serverAddress));
-	serverAddress.sin_family = AF_INET;
-	serverAddress.sin_port = htons(portNumber);
-	serverAddress.sin_addr.s_addr = INADDR_ANY;
+	listenSocketFD = createListenSocket( &serverAddress, portNumber);
 
-	//set up listensocket
-	listenSocketFD = socket(AF_INET, SOCK_STREAM, 0);
-	if (listenSocketFD < 0 ) { fprintf(stderr, "ERROR opening socket\n"); exit(1); }
-
-	//bind socket to port
-	if ( bind (listenSocketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0 ) {
-		fprintf(stderr, "ERROR on binding\n");
-		exit(1);	
-	}
-	
 	//open socket to listen with queue length of 5
 	listen( listenSocketFD, 5); 
 
@@ -130,9 +116,9 @@ int main(int argc, char* argv[]) {
 
 	while(1) {
 
-		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr*)&clientAddress, &sizeOfClientInfo);
+		connectionFD = accept(listenSocketFD, (struct sockaddr*)&clientAddress, &sizeOfClientInfo);
 		
-		if (establishedConnectionFD < 0 ) { 
+		if (connectionFD < 0 ) { 
 			fprintf(stderr, "ERROR on accept\n");
 		}
 		else {
@@ -144,7 +130,8 @@ int main(int argc, char* argv[]) {
 					exit(1);
 					break;
 				case 0:
-					communicateEncoding(establishedConnectionFD) ;
+					communicateEncoding(connectionFD) ;
+					close(connectionFD);
 					return 0;
 				default:
 					addChildProcess(spawnId);
