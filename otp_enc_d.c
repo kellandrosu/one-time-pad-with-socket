@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 	struct sockaddr_in serverAddress, clientAddress;
 
 	// Check usage & arg
-	if (argc < 2) { fprintf(stderr,"USAGE: %s port\n", argv[0]); exit(1); } 
+	if (argc < 2) { fprintf(stderr,"USAGE: %s [port]\n", argv[0]); exit(1); } 
 	portNumber = atoi(argv[1]); 
 	
 	// Set up the address struct for this process (the server)
@@ -94,6 +94,7 @@ int main(int argc, char* argv[]) {
 				error("ERROR: process fork error");
 				break;
 			case 0:
+				printf("SERVER: Received new connection\n"); fflush(stdout);
 				communicateWithClient(establishedConnectionFD) ;
 				return 0;
 			default:
@@ -169,7 +170,7 @@ int isChildProcess( pid_t pid) {
 void communicateWithClient(int establishedConnectionFD) {
 	
 	int charsRead, packetLength, messageSize, charsSent;
-	char buffer[BUF_LEN];
+	char buffer[BUF_LEN + 1];
 	char* messageIn;
 	char* messageOut;
 	
@@ -181,24 +182,36 @@ void communicateWithClient(int establishedConnectionFD) {
 	charsRead = -1; 
 			
 	//receive message
-	memset(buffer, '\0', BUF_LEN);
-	charsRead = recv( establishedConnectionFD, buffer, BUF_LEN - 1, 0);
-	if (charsRead < 0) { error("ERROR reading from socket");}
+	while( strstr(messageIn, "##") == NULL ){
 
-	//make sure input is read
-	do {
-		ioctl( establishedConnectionFD, FIONREAD, &packetLength );
-	} while (packetLength > 0);
+printf("SERVER: calling recv from socket...\n");
 
-	//cat buffer to messageIn
-	if( messageSize <= strlen(buffer) + strlen(messageIn) ) {
-		messageSize *= 2;
-		messageIn = realloc(messageIn, messageSize);
-	}
-	strcat(messageIn, buffer);
+		memset(buffer, '\0', sizeof(buffer) );
+		charsRead = recv( establishedConnectionFD, buffer, BUF_LEN, 0);
+printf("charsRead: %d\n", charsRead);
+		if (charsRead < 0) { error("ERROR reading from socket");}
+
+		//make sure input is read
+		do {
+			ioctl( establishedConnectionFD, FIONREAD, &packetLength );
+printf("%d ", packetLength);
+		} while (packetLength > 0);
+
+		//cat buffer to messageIn
+		if( messageSize <= BUF_LEN + strlen(messageIn) ) {
+			messageSize *= 2;
+			messageIn = realloc(messageIn, messageSize);
+		}
+		strcat(messageIn, buffer);
+printf("SERVER: message: %s\n",messageIn);
+	} 
+
+	char* terminalLocation = strstr(messageIn, "##"); // Where is the terminal
+	terminalLocation[0] = '\0'; // End the string early to wipe out the terminal
 
 	messageOut = encryptMessage(messageIn);
 
+printf("SERVER: sending message: %s\n");
 	//send encrypted message
 	charsSent = send(establishedConnectionFD, messageOut, strlen(messageOut), 0);
 	if (charsSent < 0 ) { error("ERROR writing to socket"); }
