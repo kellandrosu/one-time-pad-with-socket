@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
 					exit(1);
 					break;
 				case 0:
-					communicateEncoding(connectionFD) ;
+					recvTranslateSend(connectionFD, encryptMessage) ;
 					close(connectionFD);
 					return 0;
 				default:

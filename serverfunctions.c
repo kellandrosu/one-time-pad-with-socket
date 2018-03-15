@@ -102,7 +102,7 @@ char* encryptMessage(char* messageIn) {
 /*
 * 	receives, encodes and sends client message
 */
-void communicateEncoding(int establishedConnectionFD){
+void recvTranslateSend(int establishedConnectionFD, char* (*cipherFunc)(char*)){
 
 	char* messageIn ;
 	char* messageOut;
@@ -111,7 +111,7 @@ void communicateEncoding(int establishedConnectionFD){
 
 	printf("SERVER: message received: %s\n",messageIn);
 	
-	messageOut = encryptMessage(messageIn);
+	messageOut = cipherFunc(messageIn);
 
 	printf("SERVER: sending message: %s\n", messageOut);
 	

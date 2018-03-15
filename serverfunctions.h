@@ -17,7 +17,9 @@
 
 // PROTOTYPES
 
-void communicateEncoding(int establishedConnectionFD);
+char* encryptMessage(char* messageIn);
+
+void recvTranslateSend(int establishedConnectionFD, char* (*cipherFunc)(char*));
 
 char* receiveClientMessage(int establishedConnectionFD);
 
