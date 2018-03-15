@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 
 	//SIGCHLD signal catching to kill zombie child
 	struct sigaction SIGCHLD_action = {0};
-
+	
 	sigfillset(&SIGCHLD_action.sa_mask);
 	SIGCHLD_action.sa_flags = SA_SIGINFO | SA_RESTART;
 	SIGCHLD_action.sa_sigaction = catchSIGCHLD;
@@ -112,6 +112,8 @@ int main(int argc, char* argv[]) {
 	//open socket to listen with queue length of 5
 	listen( listenSocketFD, 5); 
 
+	char* clientType;
+
 	sizeOfClientInfo = sizeof(clientAddress);
 
 	while(1) {
@@ -130,7 +132,14 @@ int main(int argc, char* argv[]) {
 					exit(1);
 					break;
 				case 0:
-					recvTranslateSend(connectionFD, encryptMessage) ;
+					clientType = receiveClientMessage(connectionFD);
+					if ( strcmp(clientType, "encode") == 0 ) { 
+						sendClientMessage(connectionFD, "OK");
+						recvTranslateSend(connectionFD, encryptMessage) ;
+					}
+					else {
+						sendClientMessage(connectionFD, "NO");
+					}
 					close(connectionFD);
 					return 0;
 				default:

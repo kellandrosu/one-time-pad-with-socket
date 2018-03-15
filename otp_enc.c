@@ -41,14 +41,31 @@ int main(int argc, char* argv[]) {
 	char* plaintext;
 	char* key;
 	char* payload;
+	char serverOK[3];
 	char buffer[BUF_LEN];
 
 	if (argc < 4) { fprintf(stderr, "USAGE: %s [plaintext] [key] [port]\n", argv[0]); exit(0); }
 
+	//read files
+	plaintext = readFile(argv[1]);
+	key = readFile(argv[2]);
+	textLength = strlen(plaintext);
+	
+	if( textLength > strlen(key) ) {
+		fprintf(stderr, "CLIENT: ERROR key too shorti\n");
+		exit(1);
+	}
+	
+	//combine plaintext and key into payload
+	payload = NULL;
+	asprintf(&payload, "%s@%s##", plaintext, key);
+	free(plaintext);
+	free(key);
+
+	
+	//setup server address struct
 	portNumber = atoi(argv[3]);
 	memset( (char*)&serverAddress, '\0', sizeof(serverAddress));
-
-	//setup server address struct
 	serverAddress.sin_family = AF_INET;
 	serverAddress.sin_port = htons(portNumber);
 	
@@ -66,15 +83,15 @@ int main(int argc, char* argv[]) {
 		error("CLIENT: ERROR connection");
 	}
 
-	//read files
-	plaintext = readFile(argv[1]);
-	key = readFile(argv[2]);
-	textLength = strlen(plaintext);
-	payload = NULL;
-	//separate 
-	asprintf(&payload, "%s@%s##", plaintext, key);
-	free(plaintext);
-	free(key);
+	//send encode verification
+	sendPayload(socketFD,  "encode##") ;
+	serverOK[0] = '\0';
+	charsRead = recv(socketFD, serverOK, 3, 0);
+	if( strcmp(serverOK, "OK") != 0 ) {
+		fprintf(stderr, "Rejected by server\n");
+		exit(1);
+	}
+
 
 printf("CLIENT: sending %s\n", payload);
 
