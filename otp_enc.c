@@ -92,7 +92,7 @@ printf("CLIENT: sending %s\n", payload);
         ioctl( socketFD, FIONREAD, &packetLength);
     } while (packetLength > 0);
 	
-	fprintf(stdout, payload);
+	fprintf(stdout, "%s\n", payload);
 
 	free(payload);
 	

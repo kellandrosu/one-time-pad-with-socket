@@ -85,21 +85,24 @@ int main(int argc, char* argv[]) {
 	while(1) {
 
 		establishedConnectionFD = accept(listenSocketFD, (struct sockaddr*)&clientAddress, &sizeOfClientInfo);
-		if (establishedConnectionFD < 0 ) { error("ERROR on accept");}	
-
-		//fork child processes
-		spawnId = fork();
-		switch(spawnId) {
-			case -1:
-				error("ERROR: process fork error");
-				break;
-			case 0:
-				printf("SERVER: Received new connection\n"); fflush(stdout);
-				communicateWithClient(establishedConnectionFD) ;
-				return 0;
-			default:
-				addChildProcess(spawnId);
-				break;
+		
+		if (establishedConnectionFD < 0 ) { 
+			fprintf(stderr, "ERROR on accept\n");
+		}
+		else {
+			//fork child processes
+			spawnId = fork();
+			switch(spawnId) {
+				case -1:
+					error("ERROR: process fork error");
+					break;
+				case 0:
+					communicateWithClient(establishedConnectionFD) ;
+					return 0;
+				default:
+					addChildProcess(spawnId);
+					break;
+			}
 		}
 	}
 	return 0;
@@ -176,7 +179,7 @@ void communicateWithClient(int establishedConnectionFD) {
 	
 	//initialize incomming message to empty string
 	messageSize = 2*sizeof(buffer) + 1;
-	messageIn = malloc( messageSize);
+	messageIn = malloc(messageSize);
 	memset(messageIn, '\0', messageSize);
 	
 	charsRead = -1; 
@@ -184,17 +187,21 @@ void communicateWithClient(int establishedConnectionFD) {
 	//receive message
 	while( strstr(messageIn, "##") == NULL ){
 
-printf("SERVER: calling recv from socket...\n");
 
 		memset(buffer, '\0', sizeof(buffer) );
 		charsRead = recv( establishedConnectionFD, buffer, BUF_LEN, 0);
-printf("charsRead: %d\n", charsRead);
-		if (charsRead < 0) { error("ERROR reading from socket");}
+		
+		if (charsRead < 0) { 
+			fprintf(stderr, "ERROR could not read\n");
+		}
+		else if (charsRead < BUF_LEN ) {
+			fprintf(stderr, "ERROR read length smaller than buffer\n");
+			break;
+		}
 
 		//make sure input is read
 		do {
 			ioctl( establishedConnectionFD, FIONREAD, &packetLength );
-printf("%d ", packetLength);
 		} while (packetLength > 0);
 
 		//cat buffer to messageIn
@@ -203,7 +210,7 @@ printf("%d ", packetLength);
 			messageIn = realloc(messageIn, messageSize);
 		}
 		strcat(messageIn, buffer);
-printf("SERVER: message: %s\n",messageIn);
+printf("SERVER: message received: %s\n",messageIn);
 	} 
 
 	char* terminalLocation = strstr(messageIn, "##"); // Where is the terminal
@@ -211,10 +218,10 @@ printf("SERVER: message: %s\n",messageIn);
 
 	messageOut = encryptMessage(messageIn);
 
-printf("SERVER: sending message: %s\n");
+printf("SERVER: sending message: %s\n", messageOut);
 	//send encrypted message
 	charsSent = send(establishedConnectionFD, messageOut, strlen(messageOut), 0);
-	if (charsSent < 0 ) { error("ERROR writing to socket"); }
+	if (charsSent < 0 ) { fprintf(stderr,"ERROR writing to socket\n"); }
 
 	//make sure output is sent
 	packetLength = -5;
@@ -232,7 +239,7 @@ printf("SERVER: sending message: %s\n");
 
 /*
 		creates and returns a socket for listening
-*/
+
 int createListenSocket(struct sockaddr_in* serverAddress, int portNumber) {
 	int listenSocketFD;
 
@@ -253,7 +260,7 @@ int createListenSocket(struct sockaddr_in* serverAddress, int portNumber) {
 		error("ERROR on binding");
 	}
 }
-
+*/
 
 
 //	cipher helper function
@@ -289,7 +296,6 @@ char* encryptMessage(char* messageIn) {
 
 	int i;
 	char* messageOut;
-printf("%s\n", messageIn);
 	//set keyToken to point to start of key
 	char* keyToken = strtok(messageIn, "@");
 	keyToken = strtok(NULL, "@");
@@ -300,8 +306,6 @@ printf("%s\n", messageIn);
 	}
 
 	messageOut[strlen(messageIn)] = '\0';
-
-printf("%s\n%s\n%s\n", messageIn, keyToken, messageOut);
 
 	return messageOut;
 }	
