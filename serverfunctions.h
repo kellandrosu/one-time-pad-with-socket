@@ -17,9 +17,10 @@
 
 // PROTOTYPES
 
-char* encryptMessage(char* messageIn);
+char enc_cipher(char msg_c, char key_c);
+char dec_cipher(char msg_c, char key_c);
 
-void recvTranslateSend(int establishedConnectionFD, char* (*cipherFunc)(char*));
+void recvTranslateSend(int establishedConnectionFD, char (*cipherFunc)(char, char));
 
 char* receiveClientMessage(int establishedConnectionFD);
 

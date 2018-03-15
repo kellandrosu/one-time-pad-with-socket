@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 					clientType = receiveClientMessage(connectionFD);
 					if ( strcmp(clientType, "encode") == 0 ) { 
 						sendClientMessage(connectionFD, "OK");
-						recvTranslateSend(connectionFD, encryptMessage) ;
+						recvTranslateSend(connectionFD, enc_cipher) ;
 					}
 					else {
 						sendClientMessage(connectionFD, "NO");

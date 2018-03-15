@@ -89,7 +89,7 @@ void getTranslationFromServer(char* plainTextFile, char* keyFile, int portNumber
     }
 
 
-printf("CLIENT: sending %s\n", payload);
+//printf("CLIENT: sending %s\n", payload);
 
     //send message
     sendPayload(socketFD,  payload) ;
@@ -146,8 +146,8 @@ void sendPayload(int sockFD, char* payload) {
         sendPtr += BUF_LEN * sizeof(char);
 
     }
-printf("CLIENT: %d payload's sent!\n", i);
     free(sendBuffer);
+	//printf("CLIENT: %d payload's sent!\n", i);
 }
 
 

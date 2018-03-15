@@ -59,6 +59,27 @@ int cipher_ctoi( char c) {
 		return c - 'A';
 }
 
+
+//	encryptMessage helper function
+char dec_cipher(char msg_c, char key_c) {
+	int m, k, cipherInt;
+
+	//get int values for msg_c and key_c
+	m = cipher_ctoi(msg_c);
+	k = cipher_ctoi(key_c);
+
+	cipherInt = (m - k) % 27;
+
+	if (cipherInt < 0 ) {
+		cipherInt += 27;
+	}
+
+	if( cipherInt == 26 )
+		return ' ';
+	else
+		return cipherInt + 'A';
+}
+
 //	encryptMessage helper function
 char enc_cipher(char msg_c, char key_c) {
 	int m, k, cipherInt;
@@ -77,10 +98,10 @@ char enc_cipher(char msg_c, char key_c) {
 
 
 /*
-	splits and incoming message with the @ symbol and encrypts the first half with the second
+	splits and incoming message with the @ symbol and applies the cipher
 	returns pointer to encrypted message
 */
-char* encryptMessage(char* messageIn) {
+char* encryptMessage( char* messageIn, char (*cipherFunc)(char, char)) {
 
 	int i;
 	char* messageOut;
@@ -90,7 +111,7 @@ char* encryptMessage(char* messageIn) {
 	messageOut = (char*)malloc( strlen(messageIn + 1));
 
 	for( i=0; i<strlen(messageIn); i++ ) {
-		messageOut[i] = enc_cipher(messageIn[i], keyToken[i]); 
+		messageOut[i] = cipherFunc(messageIn[i], keyToken[i]); 
 	}
 
 	messageOut[strlen(messageIn)] = '\0';
@@ -102,24 +123,23 @@ char* encryptMessage(char* messageIn) {
 /*
 * 	receives, encodes and sends client message
 */
-void recvTranslateSend(int establishedConnectionFD, char* (*cipherFunc)(char*)){
+void recvTranslateSend( int establishedConnectionFD, char (*cipherFunc)(char, char) ){
 
 	char* messageIn ;
 	char* messageOut;
 	
 	messageIn = receiveClientMessage(establishedConnectionFD);
 
-	printf("SERVER: message received: %s\n",messageIn);
+	//printf("SERVER: message received: %s\n",messageIn);
 	
-	messageOut = cipherFunc(messageIn);
+	messageOut = encryptMessage(messageIn, cipherFunc);
 
-	printf("SERVER: sending message: %s\n", messageOut);
+	//printf("SERVER: sending message: %s\n", messageOut);
 	
 	sendClientMessage(establishedConnectionFD,  messageOut) ;
 
 	free(messageIn);
 	free(messageOut);
-
 }
 
 
