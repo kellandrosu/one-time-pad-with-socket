@@ -12,7 +12,7 @@
 #define true 1
 #define false 0
 #define CHILD_TOTAL 5
-#define BUF_LEN 256
+#define BUF_LEN 1024 
 
 
 // PROTOTYPES

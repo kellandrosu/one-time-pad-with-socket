@@ -46,64 +46,70 @@ void getTranslationFromServer(char* plainTextFile, char* keyFile, int portNumber
     textLength = strlen(plaintext);
 
     if( textLength > strlen(key) ) {
-        fprintf(stderr, "CLIENT: ERROR key too shorti\n");
+        fprintf(stderr, "CLIENT: ERROR key too short\n");
         exit(1);
     }
 
     //combine plaintext and key into payload
-    payload = NULL;
-    asprintf(&payload, "%s@%s##", plaintext, key);
+    key[ textLength ] = '\0';
+	payload = NULL;
+	asprintf(&payload, "%s@%s##", plaintext, key);
     free(plaintext);
     free(key);
 
 
     //setup server address struct
-    memset( (char*)&serverAddress, '\0', sizeof(serverAddress));
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(portNumber);
+		memset( (char*)&serverAddress, '\0', sizeof(serverAddress));
+		serverAddress.sin_family = AF_INET;
+		serverAddress.sin_port = htons(portNumber);
 
-    serverHostInfo = gethostbyname(serverHost);
+		serverHostInfo = gethostbyname(serverHost);
 
-    if (serverHostInfo < 0 ) { error("CLIENT: ERROR, no such host\n");}
+		if (serverHostInfo < 0 ) { error("CLIENT: ERROR, no such host\n");}
 
-    //copy in the address
-    memcpy( (char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length);
+		//copy in the address
+		memcpy( (char*)&serverAddress.sin_addr.s_addr, (char*)serverHostInfo->h_addr, serverHostInfo->h_length);
 
-    socketFD = socket(AF_INET, SOCK_STREAM, 0);
-    if (socketFD < 0) {error("CLIENT: ERROR opening socket");}
+		socketFD = socket(AF_INET, SOCK_STREAM, 0);
+		if (socketFD < 0) {error("CLIENT: ERROR opening socket");}
 
-    if ( connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0 ) {
-        error("CLIENT: ERROR connection");
-    }
+		if ( connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0 ) {
+			error("CLIENT: ERROR connection");
+		}
 
+
+    //send encoding method verification
     char* methodReq = NULL;
 	asprintf(&methodReq, "%s##", method);		//insert terminal character
 
-    //send encode verification
 	sendPayload(socketFD,  methodReq) ;
     serverOK[0] = '\0';
     charsRead = recv(socketFD, serverOK, 3, 0);
     if( strcmp(serverOK, "OK") != 0 ) {
-        fprintf(stderr, "Rejected by server\n");
+        fprintf(stderr, "ERROR: Rejected by server\n");
         exit(1);
     }
 
-
-//printf("CLIENT: sending %s\n", payload);
+//printf("CLIENT: sending size: %i\n", strlen(payload));
 
     //send message
     sendPayload(socketFD,  payload) ;
 
-    //get return message
-    memset(payload, '\0', textLength + 1);
-    charsRead = recv(socketFD, payload, textLength, 0);
-    if (charsRead < 0) { error("CLIENT: ERROR reading from socket");}
+    memset(payload, '\0', textLength + 1);    
+	charsRead = 0;
+    
+	//get return message
+	while( charsRead >= 0 && charsRead < textLength) {
+		charsRead += recv(socketFD, payload, textLength, 0);
+    }
+
+	if (charsRead < 0) { error("CLIENT: ERROR reading from socket");}
 
     //make sure data is read from socket
-    int packetLength;
-    do {
-        ioctl( socketFD, FIONREAD, &packetLength);
-    } while (packetLength > 0);
+  //  int packetLength;
+  //  do {
+  //      ioctl( socketFD, FIONREAD, &packetLength);
+  //  } while (packetLength > 0);
 
     fprintf(stdout, "%s\n", payload);
 
@@ -147,7 +153,7 @@ void sendPayload(int sockFD, char* payload) {
 
     }
     free(sendBuffer);
-	//printf("CLIENT: %d payload's sent!\n", i);
+//	printf("CLIENT: %d payload's sent!\n", i);
 }
 
 
@@ -158,7 +164,7 @@ int hasIllegalChars (char* text) {
     int i;
     int l = strlen(text);
     for(i=0; i < l; i++){
-        if( text[i] != ' ' && text[i] < 'A' && text[i] > 'Z') {
+        if( ( text[i] < 'A' || text[i] > 'Z') && text[i] != ' ' ) {
             return true;
         }
     }
@@ -192,7 +198,7 @@ char* readFile(char* filename) {
     payload[numBytes-1] = '\0';
 
     if ( hasIllegalChars(payload) ) {
-        fprintf(stderr, "%s contains illegal charactersi\n");
+        fprintf(stderr, "ERROR: Payload contains illegal characters\n");
         exit(1);
     }
 

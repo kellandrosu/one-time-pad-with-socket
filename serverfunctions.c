@@ -130,16 +130,20 @@ void recvTranslateSend( int establishedConnectionFD, char (*cipherFunc)(char, ch
 	
 	messageIn = receiveClientMessage(establishedConnectionFD);
 
-	//printf("SERVER: message received: %s\n",messageIn);
+//	printf("SERVER: message received size: %i\n", strlen(messageIn)); fflush(stdout);
 	
 	messageOut = encryptMessage(messageIn, cipherFunc);
 
-	//printf("SERVER: sending message: %s\n", messageOut);
+//	printf("SERVER: sending message size: %i\n", strlen(messageOut)); fflush(stdout);
 	
 	sendClientMessage(establishedConnectionFD,  messageOut) ;
 
+//	printf("SERVER: messaget sent!\n"); fflush(stdout);
+
 	free(messageIn);
 	free(messageOut);
+
+	return;
 }
 
 
@@ -158,28 +162,34 @@ char* receiveClientMessage(int establishedConnectionFD) {
 	messageSize = 2*sizeof(buffer) + 1;
 	messageIn = malloc(messageSize);
 	memset(messageIn, '\0', messageSize);
-	
-	charsRead = -1; 
 			
 	//receive message
 	while( strstr(messageIn, "##") == NULL ){
 
+//printf("SERVER: reading...\n");
 
 		memset(buffer, '\0', sizeof(buffer) );
-		charsRead = recv( establishedConnectionFD, buffer, BUF_LEN, 0);
+		charsRead = 0;
+
+		while (charsRead >= 0 && charsRead < BUF_LEN ){
+			charsRead += recv( establishedConnectionFD, buffer, BUF_LEN, 0);
+		}
 		
 		if (charsRead < 0) { 
 			fprintf(stderr, "ERROR could not read\n");
 		}
-		else if (charsRead < BUF_LEN ) {
-			fprintf(stderr, "ERROR read length smaller than buffer\n");
-			break;
-		}
+
+//		else if (charsRead < BUF_LEN ) {
+//			fprintf(stderr, "ERROR read length smaller than buffer\n");
+//			fflush(stderr);
+//			//continue reading rest of buffer
+//			continue;
+//		}
 
 		//make sure input is read
-		do {
-			ioctl( establishedConnectionFD, FIONREAD, &packetLength );
-		} while (packetLength > 0);
+//		do {
+//			ioctl( establishedConnectionFD, FIONREAD, &packetLength );
+//		} while (packetLength > 0);
 
 		//cat buffer to messageIn
 		if( messageSize <= BUF_LEN + strlen(messageIn) ) {
@@ -190,7 +200,9 @@ char* receiveClientMessage(int establishedConnectionFD) {
 	} 
 
 	char* terminalLocation = strstr(messageIn, "##"); // Where is the terminal
-	terminalLocation[0] = '\0'; // End the string early to wipe out the terminal
+	terminalLocation[0] = '\0'; //replace terminal location 
+
+//printf("SERVER: message read size: %i\n",strlen(messageIn)); fflush(stdout);
 
 	return messageIn;
 }
