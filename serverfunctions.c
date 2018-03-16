@@ -130,15 +130,15 @@ void recvTranslateSend( int establishedConnectionFD, char (*cipherFunc)(char, ch
 	
 	messageIn = receiveClientMessage(establishedConnectionFD);
 
-//	printf("SERVER: message received size: %i\n", strlen(messageIn)); fflush(stdout);
+	//printf("SERVER: message received size: %i\n", strlen(messageIn)); fflush(stdout);
 	
 	messageOut = encryptMessage(messageIn, cipherFunc);
 
-//	printf("SERVER: sending message size: %i\n", strlen(messageOut)); fflush(stdout);
+	//printf("SERVER: sending message size: %i\n", strlen(messageOut)); fflush(stdout);
 	
 	sendClientMessage(establishedConnectionFD,  messageOut) ;
 
-//	printf("SERVER: messaget sent!\n"); fflush(stdout);
+	//printf("SERVER: messaget sent!\n"); fflush(stdout);
 
 	free(messageIn);
 	free(messageOut);
@@ -224,4 +224,5 @@ void sendClientMessage(int establishedConnectionFD, char* messageOut) {
 	do {
 		ioctl( establishedConnectionFD, TIOCOUTQ, &packetLength );
 	} while (packetLength > 0);
+//printf("SERVER: sent size: %i\n", charsSent);
 }

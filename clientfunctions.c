@@ -97,14 +97,16 @@ void getTranslationFromServer(char* plainTextFile, char* keyFile, int portNumber
 
     memset(payload, '\0', textLength + 1);    
 	charsRead = 0;
-    
+
+//printf("CLIENT: reading from server size: %i\n", textLength);
+
 	//get return message
 	while( charsRead >= 0 && charsRead < textLength) {
 		charsRead += recv(socketFD, payload, textLength, 0);
     }
 
 	if (charsRead < 0) { error("CLIENT: ERROR reading from socket");}
-
+//printf("CLIENT: received size: %i\n", charsRead);
     //make sure data is read from socket
   //  int packetLength;
   //  do {
