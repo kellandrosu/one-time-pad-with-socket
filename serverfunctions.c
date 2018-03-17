@@ -164,22 +164,23 @@ char* receiveClientMessage(int establishedConnectionFD) {
 	memset(messageIn, '\0', messageSize);
 			
 	//receive message
+	int totRead;
 	while( strstr(messageIn, "##") == NULL ){
 
 //printf("SERVER: reading...\n");
-
-		memset(buffer, '\0', sizeof(buffer) );
+		totRead = 0;
 		charsRead = 0;
 
-		while (charsRead >= 0 && charsRead < BUF_LEN ){
-			charsRead += recv( establishedConnectionFD, buffer, BUF_LEN, 0);
+		memset(buffer, '\0', sizeof(buffer) );
+		
+		while (totRead >= 0 && totRead < BUF_LEN ){
+			charsRead = recv( establishedConnectionFD, buffer + totRead, BUF_LEN - totRead, 0);
+			if (charsRead < 0) { 
+				fprintf(stderr, "ERROR could not read\n");
+			}
+			totRead += charsRead;
 		}
 		
-		if (charsRead < 0) { 
-			fprintf(stderr, "ERROR could not read\n");
-		}
-
-//		else if (charsRead < BUF_LEN ) {
 //			fprintf(stderr, "ERROR read length smaller than buffer\n");
 //			fflush(stderr);
 //			//continue reading rest of buffer
